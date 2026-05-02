@@ -64,9 +64,7 @@ function Header() {
       <div className="container flex items-center justify-between h-16">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <span className="inline-flex w-9 h-9 rounded-md bg-primary text-primary-foreground items-center justify-center">
-            <Box className="w-5 h-5" />
-          </span>
+          <img src="/logo.png" alt="GameNest Designs" className="h-9 w-auto" />
           <span className="font-serif text-2xl font-semibold tracking-tight">GameNest</span>
           <span className="text-muted-foreground text-sm hidden sm:inline">Designs</span>
         </Link>

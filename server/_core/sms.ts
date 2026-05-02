@@ -1,4 +1,4 @@
-import { Twilio } from "twilio";
+import Twilio from "twilio";
 import { ENV } from "./env";
 
 const twilioClient = new Twilio(ENV.twilioAccountSid, ENV.twilioAuthToken);

@@ -1460,16 +1460,49 @@ export function AdminProductsPage() {
                 const csv = reader.result as string;
                 const lines = csv.trim().split("\n");
                 const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-                const preview = lines.slice(1).map(line => {
-                  const values = line.split(",").map(v => v.trim());
-                  return {
-                    name: values[headers.indexOf("title")] || values[headers.indexOf("name")] || values[0],
-                    description: values[headers.indexOf("description")] || "",
-                    priceCents: Math.round((parseFloat(values[headers.indexOf("price")]) || 0) * 100),
-                    inventoryCount: parseInt(values[headers.indexOf("quantity")] || values[headers.indexOf("inventory")] || "0") || 0,
-                    imageUrls: values[headers.indexOf("image")] ? [values[headers.indexOf("image")]] : [],
-                  };
-                }).filter(p => p.name && p.priceCents > 0);
+
+                // Group rows by Handle (for Shopify format with variants)
+                const productMap = new Map<string, any>();
+                for (let i = 1; i < lines.length; i++) {
+                  const line = lines[i];
+                  if (!line.trim()) continue;
+
+                  // Simple CSV parse - handle quotes
+                  const values: string[] = [];
+                  let current = "";
+                  let inQuotes = false;
+                  for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') inQuotes = !inQuotes;
+                    else if (char === "," && !inQuotes) { values.push(current.trim()); current = ""; }
+                    else current += char;
+                  }
+                  values.push(current.trim());
+
+                  const handle = values[headers.indexOf("handle")] || "";
+                  const title = values[headers.indexOf("title")] || "";
+                  const price = parseFloat(values[headers.indexOf("variant price")] || "0") || 0;
+                  const inventory = parseInt(values[headers.indexOf("variant inventory qty")] || "0") || 0;
+                  const image = values[headers.indexOf("image src")] || "";
+                  const body = values[headers.indexOf("body (html)")] || "";
+
+                  if (!productMap.has(handle)) {
+                    productMap.set(handle, {
+                      name: title,
+                      description: body.replace(/<[^>]*>/g, "").slice(0, 500),
+                      priceCents: Math.round(price * 100),
+                      inventoryCount: inventory,
+                      imageUrls: [],
+                    });
+                  }
+
+                  if (image) {
+                    const urls = productMap.get(handle)!.imageUrls;
+                    if (!urls.includes(image)) urls.push(image);
+                  }
+                }
+
+                const preview = Array.from(productMap.values()).filter(p => p.name && p.priceCents > 0);
                 setImportModal({ preview, categoryId: 0 });
               } catch (err) { toast.error("Failed to parse CSV"); }
             };

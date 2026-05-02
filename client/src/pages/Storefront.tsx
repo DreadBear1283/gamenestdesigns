@@ -14,6 +14,7 @@ import {
   Search,
   ShieldCheck,
   ShoppingBag,
+  Star,
   Trash2,
   Truck,
   UserPlus,
@@ -50,6 +51,115 @@ function Field({
         className="w-full h-11 rounded-md border border-border bg-card px-3 focus:outline-none focus:ring-2 focus:ring-ring"
       />
     </label>
+  );
+}
+
+// ─── REVIEW CARD ─────────────────────────────────────────────────────────────
+function ReviewCard({ review }: { review: any }) {
+  return (
+    <div className="p-4 rounded-lg border border-border bg-card">
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <p className="font-semibold">{review.title}</p>
+          <p className="text-sm text-muted-foreground">{review.authorName}</p>
+        </div>
+        <div className="flex gap-0.5">
+          {[...Array(5)].map((_, i) => (
+            <Star key={i} className={`w-4 h-4 ${i < review.rating ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+          ))}
+        </div>
+      </div>
+      <p className="text-sm text-muted-foreground">{review.content}</p>
+    </div>
+  );
+}
+
+// ─── REVIEWS SECTION ─────────────────────────────────────────────────────────
+function ReviewsSection() {
+  const reviews = trpc.reviews.getRecent.useQuery({ limit: 6 });
+
+  if (!reviews.data?.length) return null;
+
+  return (
+    <section className="py-16 border-t border-border">
+      <div className="container">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-serif font-bold mb-2">Customer Reviews</h2>
+          <p className="text-muted-foreground">What our customers are saying</p>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {reviews.data.map((review: any) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── REVIEW FORM ─────────────────────────────────────────────────────────────
+function ReviewForm({ orderId, onSuccess }: { orderId: number; onSuccess: () => void }) {
+  const [rating, setRating] = useState(5);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const create = trpc.reviews.create.useMutation({
+    onSuccess: () => {
+      toast.success("Review posted!");
+      setTitle("");
+      setContent("");
+      setRating(5);
+      onSuccess();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <div className="p-6 rounded-lg border border-border bg-card">
+      <h3 className="text-lg font-semibold mb-4">Share Your Review</h3>
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold mb-2">Rating</label>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4, 5].map((r) => (
+              <button
+                key={r}
+                onClick={() => setRating(r)}
+                className="text-2xl"
+              >
+                <Star className={`w-6 h-6 ${r <= rating ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold mb-2">Title</label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Summarize your review"
+            className="w-full h-11 rounded-md border border-border bg-background px-3"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-semibold mb-2">Review</label>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="Tell us what you think..."
+            rows={4}
+            className="w-full rounded-md border border-border bg-background px-3 py-2"
+          />
+        </div>
+        <button
+          onClick={() => create.mutate({ orderId, rating, title, content })}
+          disabled={create.isPending || !title || !content}
+          className="w-full h-11 bg-primary text-primary-foreground font-semibold rounded-md disabled:opacity-50"
+        >
+          {create.isPending ? "Posting..." : "Post Review"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -397,6 +507,8 @@ export function HomePage() {
           </div>
         )}
       </section>
+
+      <ReviewsSection />
     </PageShell>
   );
 }
@@ -782,6 +894,12 @@ export function OrderConfirmationPage() {
             Continue shopping
           </Link>
         </div>
+
+        {order.data && (
+          <div className="mt-12">
+            <ReviewForm orderId={order.data.id} onSuccess={() => {}} />
+          </div>
+        )}
       </section>
     </PageShell>
   );

@@ -24,9 +24,12 @@ import {
   HomePage,
   LoginPage,
   OrderConfirmationPage,
+  PrivacyPage,
   ProductDetailPage,
+  RefundsPage,
   ShopPage,
   SignupPage,
+  TermsPage,
 } from "./pages/Storefront";
 
 function Router() {
@@ -53,6 +56,9 @@ function Router() {
       <Route path="/admin/team" component={AdminTeamPage} />
       <Route path="/admin/discounts" component={AdminDiscountsPage} />
       <Route path="/admin/chats" component={AdminChatsPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/refunds" component={RefundsPage} />
       <Route component={NotFound} />
     </Switch>
   );

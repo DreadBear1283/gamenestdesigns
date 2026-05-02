@@ -194,14 +194,18 @@ function Footer() {
         <div>
           <h4 className="font-semibold mb-3 text-sm">Studio</h4>
           <p className="text-sm text-muted-foreground">
-            Made-to-order in small batches. Most pieces ship within 5–7 business days from the studio.
+            Made with Bambu Lab 3D printers. Most pieces ship within 2–3 business days from the studio.
           </p>
         </div>
       </div>
       <div className="border-t border-border py-4">
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} GameNest Designs. All rights reserved.</span>
-          <span>Crafted for collectors. Owned by collectors.</span>
+          <div className="flex gap-4">
+            <Link href="/terms" className="hover:text-primary">Terms</Link>
+            <Link href="/privacy" className="hover:text-primary">Privacy</Link>
+            <Link href="/refunds" className="hover:text-primary">Refunds</Link>
+          </div>
         </div>
       </div>
     </footer>
@@ -532,8 +536,9 @@ export function ProductDetailPage() {
             </button>
           </div>
           <div className="mt-8 grid sm:grid-cols-2 gap-3 text-sm">
-            <div className="flex items-start gap-2"><Truck className="w-4 h-4 mt-0.5 shrink-0" /><span>Ships in 5–7 business days</span></div>
-            <div className="flex items-start gap-2"><ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" /><span>Quality guaranteed — replacement or refund</span></div>
+            <div className="flex items-start gap-2"><Truck className="w-4 h-4 mt-0.5 shrink-0" /><span>Ships in 2–3 business days</span></div>
+            <div className="flex items-start gap-2"><ShieldCheck className="w-4 h-4 mt-0.5 shrink-0" /><span>Quality guaranteed — <Link href="/refunds" className="text-primary hover:underline">see refund policy</Link></span></div>
+            <div className="flex items-start gap-2 sm:col-span-2"><Box className="w-4 h-4 mt-0.5 shrink-0" /><span>Made by Bambu Lab 3D printers</span></div>
             {p.isDigital && (
               <div className="flex items-start gap-2 sm:col-span-2">
                 <Package2 className="w-4 h-4 mt-0.5 shrink-0" />
@@ -1896,5 +1901,102 @@ export function AdminChatsPage() {
         </div>
       </div>
     </AdminLayout>
+  );
+}
+
+// ─── LEGAL PAGES ──────────────────────────────────────────────────────────────
+export function TermsPage() {
+  return (
+    <PageShell>
+      <section className="container py-12 max-w-3xl mx-auto">
+        <h1 className="font-serif text-4xl font-semibold mb-8">Terms of Service</h1>
+        <div className="prose prose-invert max-w-none space-y-6 text-foreground">
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">1. Overview</h2>
+            <p className="text-muted-foreground">GameNest Designs provides board game organizers, inserts, and digital files. By using our site, you agree to these terms.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">2. Products</h2>
+            <p className="text-muted-foreground">All products are made using Bambu Lab 3D printers and ship within 2–3 business days. Digital files are delivered immediately upon payment.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">3. Ordering</h2>
+            <p className="text-muted-foreground">Orders are binding once placed. You agree to provide accurate shipping information. Prices are in USD and subject to change without notice.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">4. Intellectual Property</h2>
+            <p className="text-muted-foreground">All designs and content on this site are owned by GameNest Designs. You may not reproduce, distribute, or sell our products without permission.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">5. Limitation of Liability</h2>
+            <p className="text-muted-foreground">GameNest Designs is not liable for indirect, incidental, or consequential damages. Our liability is limited to the purchase price of the product.</p>
+          </div>
+        </div>
+      </section>
+    </PageShell>
+  );
+}
+
+export function PrivacyPage() {
+  return (
+    <PageShell>
+      <section className="container py-12 max-w-3xl mx-auto">
+        <h1 className="font-serif text-4xl font-semibold mb-8">Privacy Policy</h1>
+        <div className="prose prose-invert max-w-none space-y-6 text-foreground">
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">1. Information Collection</h2>
+            <p className="text-muted-foreground">We collect name, email, phone, and shipping address to process orders. Payment information is handled by Stripe and is not stored on our servers.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">2. Data Usage</h2>
+            <p className="text-muted-foreground">We use your information to fulfill orders, send order updates, and respond to inquiries. We will not sell your data to third parties.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">3. Cookies</h2>
+            <p className="text-muted-foreground">We use cookies for authentication and session management. Your browser can be configured to decline cookies, but some features may not work properly.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">4. Newsletter</h2>
+            <p className="text-muted-foreground">You may opt in to our newsletter during signup. You can unsubscribe at any time by clicking the link in the email.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">5. Contact</h2>
+            <p className="text-muted-foreground">For privacy questions, please use our <Link href="/contact" className="text-primary hover:underline">contact form</Link>.</p>
+          </div>
+        </div>
+      </section>
+    </PageShell>
+  );
+}
+
+export function RefundsPage() {
+  return (
+    <PageShell>
+      <section className="container py-12 max-w-3xl mx-auto">
+        <h1 className="font-serif text-4xl font-semibold mb-8">Refunds & Returns</h1>
+        <div className="prose prose-invert max-w-none space-y-6 text-foreground">
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">1. Return Window</h2>
+            <p className="text-muted-foreground">We offer a 30-day return window from the date of delivery. Items must be unused and in original packaging.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">2. Return Process</h2>
+            <p className="text-muted-foreground">Contact us via our <Link href="/contact" className="text-primary hover:underline">contact form</Link> with your order number to request a return. We'll provide a return shipping label.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">3. Refunds</h2>
+            <p className="text-muted-foreground">Once we receive and inspect the returned item, we'll process a refund within 7 business days. Refunds are issued to the original payment method.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">4. Damaged Items</h2>
+            <p className="text-muted-foreground">If your item arrives damaged, contact us immediately with photos. We'll replace it or refund you at no cost.</p>
+          </div>
+          <div>
+            <h2 className="text-2xl font-semibold mb-3">5. Digital Files</h2>
+            <p className="text-muted-foreground">Digital downloads cannot be returned or refunded. Please review the preview before purchasing.</p>
+          </div>
+        </div>
+      </section>
+    </PageShell>
   );
 }

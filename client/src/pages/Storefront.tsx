@@ -1610,7 +1610,7 @@ export function AdminProductsPage() {
                 </td>
                 <td className="p-3 text-right space-x-1">
                   <button onClick={() => setEditing(p)} className="px-3 h-8 rounded-md hover:bg-secondary text-sm">Edit</button>
-                  <button onClick={() => { if (confirm("Hide this product?")) deactivate.mutateAsync({ id: p.id }); }} className="px-3 h-8 rounded-md hover:bg-secondary text-sm text-destructive">Hide</button>
+                  <button onClick={async () => { if (confirm("Hide this product?")) { try { await deactivate.mutateAsync({ id: p.id }); toast.success("Product hidden"); } catch (e: any) { toast.error(e.message ?? "Failed to hide"); } } }} className="px-3 h-8 rounded-md hover:bg-secondary text-sm text-destructive">Hide</button>
                 </td>
               </tr>
             ))}

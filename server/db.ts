@@ -539,10 +539,8 @@ export async function listChatConversations(userId?: number, includeAll = false)
 export async function closeChatConversation(conversationId: number) {
   const db = getDb();
   if (!db) return;
-  await db
-    .update(chatConversations)
-    .set({ status: "closed", updatedAt: new Date() })
-    .where(eq(chatConversations.id, conversationId));
+  await db.delete(chatMessages).where(eq(chatMessages.conversationId, conversationId));
+  await db.delete(chatConversations).where(eq(chatConversations.id, conversationId));
 }
 
 // ---------- ADMIN STATS ----------

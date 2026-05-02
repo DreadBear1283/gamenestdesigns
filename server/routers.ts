@@ -16,6 +16,7 @@ import {
   fetchEtsyOrders,
   fetchEtsyReviews,
   fetchEtsySalesData,
+  fetchEtsyShopInfo,
   sendEtsyMessage,
 } from "./_core/etsy";
 import { notifyOwner, sendEmail } from "./_core/notification";
@@ -686,6 +687,15 @@ const reviewsRouter = router({
       const etsyReviews = await fetchEtsyReviews(50);
       await db.importEtsyReviews(etsyReviews);
       return { imported: etsyReviews.length };
+    }),
+  testConfig: adminProcedure
+    .mutation(async () => {
+      try {
+        const shopInfo = await fetchEtsyShopInfo();
+        return { success: true, shop_id: shopInfo.shop_id, shop_name: shopInfo.shop_name };
+      } catch (error: any) {
+        return { success: false, error: error.message };
+      }
     }),
   delete: adminProcedure
     .input(z.object({ id: z.number().int() }))

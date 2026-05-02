@@ -38,20 +38,27 @@ async function fetchEtsyApi(endpoint: string, method: string = "GET", body?: any
   }
 
   const url = `https://api.etsy.com/v3/application/shops/${ENV.etsyShopId}${endpoint}`;
-  const response = await fetch(url, {
-    method,
-    headers: {
-      "x-api-key": ENV.etsyApiKey,
-      "Content-Type": "application/json",
-    },
-    ...(body && { body: JSON.stringify(body) }),
-  });
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "x-api-key": ENV.etsyApiKey,
+        "Content-Type": "application/json",
+      },
+      ...(body && { body: JSON.stringify(body) }),
+    });
 
-  if (!response.ok) {
-    throw new Error(`Etsy API error: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Etsy API ${response.status}:`, errorText);
+      throw new Error(`Etsy API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error(`Etsy API request failed for ${url}:`, error);
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function fetchEtsyReviews(limit: number = 20): Promise<EtsyReview[]> {
@@ -89,6 +96,24 @@ export async function sendEtsyMessage(conversationId: number, message: string): 
     await fetchEtsyApi(`/conversations/${conversationId}`, "POST", { message });
   } catch (error) {
     console.error("Failed to send Etsy message:", error);
+    throw error;
+  }
+}
+
+export async function fetchEtsyShopInfo(): Promise<any> {
+  try {
+    return await fetch("https://api.etsy.com/v3/application/shops/me", {
+      method: "GET",
+      headers: {
+        "x-api-key": ENV.etsyApiKey,
+        "Content-Type": "application/json",
+      },
+    }).then(r => {
+      if (!r.ok) throw new Error(`Etsy API error: ${r.status}`);
+      return r.json();
+    });
+  } catch (error) {
+    console.error("Failed to fetch Etsy shop info:", error);
     throw error;
   }
 }

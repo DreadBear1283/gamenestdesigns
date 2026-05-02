@@ -2113,15 +2113,28 @@ export function AdminDiscountsPage() {
 
 // ─── ADMIN CHATS ──────────────────────────────────────────────────────────────
 export function AdminChatsPage() {
+  const [tab, setTab] = useState<"site" | "etsy">("site");
   const chats = trpc.admin.chats.useQuery();
+  const etsyConvos = trpc.etsy.conversations.useQuery();
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [activeEtsyId, setActiveEtsyId] = useState<number | null>(null);
   const thread = trpc.admin.chatThread.useQuery(activeId ? { conversationId: activeId } : (undefined as any), { enabled: !!activeId });
   const reply = trpc.admin.replyToChat.useMutation({ onSuccess: () => { thread.refetch(); chats.refetch(); } });
   const close = trpc.admin.closeChat.useMutation({ onSuccess: () => { chats.refetch(); thread.refetch(); } });
+  const etsySend = trpc.etsy.sendMessage.useMutation({ onSuccess: () => { etsyConvos.refetch(); } });
   const [draft, setDraft] = useState("");
+  const [etsyDraft, setEtsyDraft] = useState("");
+
+  const activeEtsy = etsyConvos.data?.find(c => c.conversation_id === activeEtsyId);
 
   return (
     <AdminLayout title="Customer messages">
+      <div className="mb-4 flex gap-2 border-b border-border">
+        <button onClick={() => setTab("site")} className={`px-4 py-2 font-semibold border-b-2 ${tab === "site" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>Site Messages</button>
+        <button onClick={() => setTab("etsy")} className={`px-4 py-2 font-semibold border-b-2 ${tab === "etsy" ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}>Etsy Messages</button>
+      </div>
+
+      {tab === "site" ? (
       <div className="grid lg:grid-cols-[320px_1fr] gap-4">
         <div className="gnd-card divide-y divide-border h-fit">
           {(chats.data?.length ?? 0) === 0 && <div className="p-4 text-sm text-muted-foreground">No conversations yet.</div>}
@@ -2189,6 +2202,64 @@ export function AdminChatsPage() {
           ) : null}
         </div>
       </div>
+      ) : (
+      <div className="grid lg:grid-cols-[320px_1fr] gap-4">
+        <div className="gnd-card divide-y divide-border h-fit">
+          {etsyConvos.isLoading && <div className="p-4 text-sm text-muted-foreground">Loading Etsy messages…</div>}
+          {(etsyConvos.data?.length ?? 0) === 0 && <div className="p-4 text-sm text-muted-foreground">No Etsy conversations.</div>}
+          {etsyConvos.data?.map((c: any) => (
+            <button
+              key={c.conversation_id}
+              onClick={() => setActiveEtsyId(c.conversation_id)}
+              className={`block w-full text-left p-4 ${activeEtsyId === c.conversation_id ? "bg-secondary" : "hover:bg-secondary/50"}`}
+            >
+              <div className="font-semibold text-sm">{c.buyer_display_name}</div>
+              <div className="text-xs text-muted-foreground truncate">{c.last_message_text}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{new Date(c.last_message_time * 1000).toLocaleString()}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="gnd-card p-5 min-h-[400px]">
+          {!activeEtsyId ? (
+            <div className="text-muted-foreground">Select an Etsy conversation.</div>
+          ) : !activeEtsy ? (
+            <div className="text-muted-foreground">Loading…</div>
+          ) : (
+            <>
+              <div className="mb-4">
+                <h3 className="font-serif text-xl font-semibold">{activeEtsy.buyer_display_name}</h3>
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                {activeEtsy.messages?.map((m: any) => (
+                  <div key={m.message_id} className={`p-3 rounded-md ${m.user_id === 0 ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
+                    <div className="text-xs uppercase font-semibold opacity-70 mb-1">{m.user_id === 0 ? "You (admin)" : "Customer"}</div>
+                    <div className="text-sm whitespace-pre-line">{m.message}</div>
+                    <div className="text-[10px] opacity-50 mt-1">{new Date(m.create_timestamp * 1000).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex gap-2">
+                <input
+                  value={etsyDraft}
+                  onChange={(e) => setEtsyDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); etsySend.mutateAsync({ conversationId: activeEtsyId, message: etsyDraft }).then(() => setEtsyDraft("")); } }}
+                  placeholder="Type a reply… (Enter to send)"
+                  className="flex-1 h-11 rounded-md border border-border bg-card px-3"
+                />
+                <button
+                  onClick={() => etsySend.mutateAsync({ conversationId: activeEtsyId, message: etsyDraft }).then(() => setEtsyDraft(""))}
+                  disabled={!etsyDraft.trim() || etsySend.isPending}
+                  className="px-5 h-11 rounded-md bg-primary text-primary-foreground font-semibold disabled:opacity-50"
+                >
+                  Send
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+      )}
     </AdminLayout>
   );
 }

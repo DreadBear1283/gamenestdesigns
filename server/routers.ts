@@ -9,7 +9,15 @@ import {
   verifyPassword,
 } from "./_core/auth";
 import { ENV } from "./_core/env";
-import { fetchEtsyReviews } from "./_core/etsy";
+import {
+  fetchEtsyConversationMessages,
+  fetchEtsyConversations,
+  fetchEtsyListings,
+  fetchEtsyOrders,
+  fetchEtsyReviews,
+  fetchEtsySalesData,
+  sendEtsyMessage,
+} from "./_core/etsy";
 import { notifyOwner, sendEmail } from "./_core/notification";
 import { sendOrderNotificationSMS } from "./_core/sms";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -598,6 +606,46 @@ const adminRouter = router({
     .mutation(({ input }) => db.closeChatConversation(input.conversationId)),
 });
 
+// ====== ETSY ROUTER ======
+const etsyRouter = router({
+  conversations: adminProcedure
+    .query(async () => {
+      const convos = await fetchEtsyConversations();
+      return Promise.all(
+        convos.map(async (c) => ({
+          ...c,
+          messages: await fetchEtsyConversationMessages(c.conversation_id),
+        }))
+      );
+    }),
+  sendMessage: adminProcedure
+    .input(z.object({ conversationId: z.number().int(), message: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      await sendEtsyMessage(input.conversationId, input.message);
+      return { success: true };
+    }),
+  salesData: adminProcedure
+    .query(() => fetchEtsySalesData()),
+  listings: adminProcedure
+    .query(() => fetchEtsyListings()),
+  orders: adminProcedure
+    .query(async () => {
+      const etsyOrders = await fetchEtsyOrders();
+      return Promise.all(
+        etsyOrders.map(async (order) => {
+          const existing = await db.getOrderByNumber(order.order_number?.toString() ?? `etsy-${order.order_id}`);
+          return { ...order, imported: !!existing };
+        })
+      );
+    }),
+  syncReviews: adminProcedure
+    .mutation(async () => {
+      const reviews = await fetchEtsyReviews(50);
+      await db.importEtsyReviews(reviews);
+      return { imported: reviews.length };
+    }),
+});
+
 // ====== REVIEWS ROUTER ======
 const reviewsRouter = router({
   getProductReviews: publicProcedure
@@ -641,6 +689,7 @@ export const appRouter = router({
   account: accountRouter,
   admin: adminRouter,
   reviews: reviewsRouter,
+  etsy: etsyRouter,
 });
 
 export type AppRouter = typeof appRouter;

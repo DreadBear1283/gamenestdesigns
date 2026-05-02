@@ -654,6 +654,13 @@ const reviewsRouter = router({
   getRecent: publicProcedure
     .input(z.object({ limit: z.number().int().default(10) }))
     .query(({ input }) => db.getRecentReviews(input.limit)),
+  getAll: adminProcedure
+    .input(z.object({ source: z.enum(["all", "customer", "etsy"]).default("all") }))
+    .query(async ({ input }) => {
+      const allReviews = await db.getAllReviews();
+      if (input.source === "all") return allReviews;
+      return allReviews.filter((r) => r.source === input.source);
+    }),
   create: protectedProcedure
     .input(z.object({
       productId: z.number().int().optional(),
@@ -679,6 +686,11 @@ const reviewsRouter = router({
       const etsyReviews = await fetchEtsyReviews(50);
       await db.importEtsyReviews(etsyReviews);
       return { imported: etsyReviews.length };
+    }),
+  delete: adminProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ input }) => {
+      return db.deleteReview(input.id);
     }),
 });
 

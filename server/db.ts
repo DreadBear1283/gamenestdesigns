@@ -309,7 +309,13 @@ export async function getOrderById(id: number) {
 export async function listOrdersForUser(userId: number) {
   const db = getDb();
   if (!db) return [];
-  return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  const userOrders = await db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+  return Promise.all(
+    userOrders.map(async (o) => {
+      const items = await db.select().from(orderItems).where(eq(orderItems.orderId, o.id));
+      return { ...o, items };
+    })
+  );
 }
 
 export async function listAllOrders() {
@@ -634,4 +640,16 @@ export async function importEtsyReviews(etsyReviews: Array<{ review_id: number; 
       })
       .onConflictDoNothing({ target: reviews.etsyReviewId });
   }
+}
+
+export async function getAllReviews() {
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(reviews).orderBy(desc(reviews.createdAt));
+}
+
+export async function deleteReview(id: number) {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(reviews).where(eq(reviews.id, id));
 }

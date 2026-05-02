@@ -17,6 +17,7 @@ import {
   AdminOrdersPage,
   AdminOverviewPage,
   AdminProductsPage,
+  AdminReviewsPage,
   AdminTeamPage,
   CartPage,
   CheckoutPage,
@@ -55,6 +56,7 @@ function Router() {
       <Route path="/admin/customers" component={AdminCustomersPage} />
       <Route path="/admin/team" component={AdminTeamPage} />
       <Route path="/admin/discounts" component={AdminDiscountsPage} />
+      <Route path="/admin/reviews" component={AdminReviewsPage} />
       <Route path="/admin/chats" component={AdminChatsPage} />
       <Route path="/terms" component={TermsPage} />
       <Route path="/privacy" component={PrivacyPage} />

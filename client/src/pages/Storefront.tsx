@@ -1095,23 +1095,53 @@ export function AccountPage() {
 
 export function AccountOrdersPage() {
   const orders = trpc.account.orders.useQuery();
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+
   return (
     <RequireAuth>
       <PageShell>
         <section className="container py-12">
           <h1 className="font-serif text-4xl font-semibold mb-6">Your orders</h1>
           <AccountTabs />
-          <div className="gnd-card divide-y divide-border">
-            {orders.isLoading && <div className="p-6 text-muted-foreground">Loading…</div>}
-            {orders.data?.length === 0 && <div className="p-6 text-muted-foreground">No orders yet.</div>}
+          <div className="space-y-4">
+            {orders.isLoading && <div className="p-6 text-muted-foreground gnd-card">Loading…</div>}
+            {orders.data?.length === 0 && <div className="p-6 text-muted-foreground gnd-card">No orders yet.</div>}
             {orders.data?.map((o) => (
-              <div key={o.id} className="p-5 flex flex-wrap gap-3 items-center justify-between">
-                <div>
-                  <div className="font-semibold">{o.orderNumber}</div>
-                  <div className="text-xs text-muted-foreground">{new Date(o.createdAt).toLocaleString()}</div>
-                </div>
-                <span className="text-xs uppercase tracking-wider font-semibold px-2 py-1 rounded-full border border-border">{o.status}</span>
-                <div className="font-semibold">{formatPrice(o.totalAmount)}</div>
+              <div key={o.id} className="gnd-card">
+                <button
+                  onClick={() => setExpandedId(expandedId === o.id ? null : o.id)}
+                  className="w-full p-5 flex flex-wrap gap-3 items-center justify-between hover:bg-secondary/50"
+                >
+                  <div>
+                    <div className="font-semibold text-left">{o.orderNumber}</div>
+                    <div className="text-xs text-muted-foreground text-left">{new Date(o.createdAt).toLocaleString()}</div>
+                  </div>
+                  <span className="text-xs uppercase tracking-wider font-semibold px-2 py-1 rounded-full border border-border">{o.status}</span>
+                  <div className="font-semibold">{formatPrice(o.totalAmount)}</div>
+                  <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${expandedId === o.id ? "rotate-90" : ""}`} />
+                </button>
+                {expandedId === o.id && (
+                  <div className="border-t border-border p-5 space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Items</div>
+                        <div className="space-y-1">
+                          {(o as any).items?.map((item: any) => (
+                            <div key={item.id}>{item.quantity}× {item.productName}</div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Shipping</div>
+                        <div>{o.shippingAddress?.street || "—"}</div>
+                        <div className="text-sm">{o.shippingAddress?.city}, {o.shippingAddress?.state} {o.shippingAddress?.zip}</div>
+                      </div>
+                    </div>
+                    <div className="border-t border-border pt-4">
+                      <ReviewForm orderId={o.id} onSuccess={() => {}} />
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1326,6 +1356,7 @@ function AdminLayout({ children, title }: { children: ReactNode; title: string }
     { href: "/admin/orders", label: "Orders" },
     { href: "/admin/customers", label: "Customers" },
     { href: "/admin/discounts", label: "Discounts" },
+    { href: "/admin/reviews", label: "Reviews" },
     { href: "/admin/chats", label: "Messages" },
     { href: "/admin/team", label: "Team" },
   ];
@@ -2326,6 +2357,89 @@ export function PrivacyPage() {
         </div>
       </section>
     </PageShell>
+  );
+}
+
+// ─── ADMIN REVIEWS PAGE ───────────────────────────────────────────────────────
+export function AdminReviewsPage() {
+  const reviews = trpc.reviews.getAll.useQuery({ source: "all" });
+  const importMutation = trpc.reviews.importFromEtsy.useMutation({ onSuccess: () => reviews.refetch() });
+  const deleteMutation = trpc.reviews.delete.useMutation({ onSuccess: () => reviews.refetch() });
+  const [sourceFilter, setSourceFilter] = useState<"all" | "customer" | "etsy">("all");
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    reviews.refetch();
+  }, [sourceFilter]);
+
+  const filtered = reviews.data?.filter(r => sourceFilter === "all" ? true : r.source === sourceFilter) ?? [];
+
+  return (
+    <AdminLayout title="Reviews">
+      <section className="container py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h2 className="text-2xl font-semibold">Customer & Etsy Reviews</h2>
+          <button
+            onClick={async () => {
+              await importMutation.mutateAsync();
+              toast.success("Reviews imported from Etsy");
+            }}
+            disabled={importMutation.isPending}
+            className="px-5 h-11 rounded-md bg-primary text-primary-foreground font-semibold disabled:opacity-50"
+          >
+            {importMutation.isPending ? "Importing…" : "Import from Etsy"}
+          </button>
+        </div>
+
+        <div className="flex gap-2 mb-6">
+          {(["all", "customer", "etsy"] as const).map(s => (
+            <button
+              key={s}
+              onClick={() => setSourceFilter(s)}
+              className={`px-4 h-10 rounded-md capitalize ${sourceFilter === s ? "bg-primary text-primary-foreground" : "border border-border hover:bg-secondary"}`}
+            >
+              {s === "all" ? "All" : s} ({(reviews.data ?? []).filter(r => s === "all" ? true : r.source === s).length})
+            </button>
+          ))}
+        </div>
+
+        <div className="gnd-card divide-y divide-border">
+          {reviews.isLoading && <div className="p-6 text-muted-foreground">Loading…</div>}
+          {filtered.length === 0 && <div className="p-6 text-muted-foreground">No reviews.</div>}
+          {filtered.map(r => (
+            <div key={r.id} className="p-5 space-y-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className={`w-4 h-4 ${i < r.rating ? "fill-primary text-primary" : "text-muted-foreground"}`} />
+                      ))}
+                    </div>
+                    <span className="text-xs uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full border border-border">{r.source}</span>
+                  </div>
+                  <h3 className="font-semibold">{r.title}</h3>
+                  <p className="text-sm text-muted-foreground mt-1">{r.content}</p>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    <span>By <strong>{r.authorName}</strong></span> · {new Date(r.createdAt).toLocaleString()}
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    await deleteMutation.mutateAsync({ id: r.id });
+                    toast.success("Review deleted");
+                  }}
+                  disabled={deleteMutation.isPending}
+                  className="p-2 rounded-md hover:bg-secondary disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </AdminLayout>
   );
 }
 

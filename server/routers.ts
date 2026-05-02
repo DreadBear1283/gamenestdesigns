@@ -10,6 +10,7 @@ import {
 } from "./_core/auth";
 import { ENV } from "./_core/env";
 import { notifyOwner, sendEmail } from "./_core/notification";
+import { sendOrderNotificationSMS } from "./_core/sms";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { toStripeProductData } from "./products";
@@ -175,6 +176,7 @@ async function notifyNewOrder(order: NonNullable<Awaited<ReturnType<typeof db.ge
     ...order.items.map(item => `  ${item.quantity} × ${item.productName} (${money(item.totalPrice)})`),
   ].join("\n");
   await notifyOwner({ title: `New GameNestDesigns order ${order.orderNumber}`, content });
+  await sendOrderNotificationSMS(order.orderNumber, order.customerName);
 
   if (order.customerEmail) {
     await sendEmail({

@@ -22,6 +22,11 @@ export const ENV = {
   emailFrom: required("EMAIL_FROM", "GameNest Designs <hello@example.com>"),
   resendApiKey: required("RESEND_API_KEY"),
 
+  twilioAccountSid: required("TWILIO_ACCOUNT_SID"),
+  twilioAuthToken: required("TWILIO_AUTH_TOKEN"),
+  twilioPhoneNumber: required("TWILIO_PHONE_NUMBER"),
+  ownerPhoneNumber: required("OWNER_PHONE_NUMBER"),
+
   appUrl: required("APP_URL", "http://localhost:3000"),
   port: parseInt(required("PORT", "3000")),
   isProduction: process.env.NODE_ENV === "production",

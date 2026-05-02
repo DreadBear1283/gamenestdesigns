@@ -27,8 +27,8 @@ export const ENV = {
   twilioPhoneNumber: required("TWILIO_PHONE_NUMBER"),
   ownerPhoneNumber: required("OWNER_PHONE_NUMBER"),
 
-  etsyShopId: required("ETSY_SHOP_ID"),
-  etsyApiKey: required("ETSY_API_KEY"),
+  etsyShopId: required("ETSY_SHOP_ID", ""),
+  etsyApiKey: required("ETSY_API_KEY", ""),
 
   appUrl: required("APP_URL", "http://localhost:3000"),
   port: parseInt(required("PORT", "3000")),

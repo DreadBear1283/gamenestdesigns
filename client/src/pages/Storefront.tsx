@@ -171,7 +171,7 @@ function Footer() {
             <span className="font-serif text-xl font-semibold">GameNest Designs</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            Boutique board game inserts and accessories — hand-crafted in small batches for collectors who want their table to feel like a treasure.
+            3D-printed board game inserts and accessories — precision engineered in small batches for collectors who want their table to feel like a treasure.
           </p>
         </div>
         <div>
@@ -302,13 +302,13 @@ export function HomePage() {
         <div className="container py-16 md:py-24 grid md:grid-cols-2 gap-12 items-center">
           <div>
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/30 border border-accent/40 text-xs font-semibold uppercase tracking-wider">
-              <Hammer className="w-3.5 h-3.5" /> Hand-built in small batches
+              <Hammer className="w-3.5 h-3.5" /> 3D-printed in small batches
             </span>
             <h1 className="font-serif text-5xl md:text-6xl leading-[1.05] font-semibold mt-4">
               Inserts that turn <em className="italic not-italic">setup</em> into ceremony.
             </h1>
             <p className="mt-5 text-lg text-muted-foreground max-w-lg">
-              Modular wooden organizers, sleeve-friendly card lanes, and 3D-printed token vaults — engineered for the games you love most.
+              3D-printed modular organizers, sleeve-friendly card lanes, and precision token vaults — engineered for the games you love most.
             </p>
             <div className="mt-7 flex gap-3 flex-wrap">
               <Link

@@ -1456,47 +1456,76 @@ export function AdminProductsPage() {
             reader.onload = () => {
               try {
                 const csv = reader.result as string;
-                const lines = csv.trim().split("\n");
-                const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
 
-                // Group rows by Handle (for Shopify format with variants)
-                const productMap = new Map<string, any>();
-                for (let i = 1; i < lines.length; i++) {
-                  const line = lines[i];
-                  if (!line.trim()) continue;
+                // Proper CSV parsing that handles quoted fields with newlines
+                const rows: string[][] = [];
+                let current = "";
+                let inQuotes = false;
+                let currentRow: string[] = [];
 
-                  // Simple CSV parse - handle quotes
-                  const values: string[] = [];
-                  let current = "";
-                  let inQuotes = false;
-                  for (let j = 0; j < line.length; j++) {
-                    const char = line[j];
-                    if (char === '"') inQuotes = !inQuotes;
-                    else if (char === "," && !inQuotes) { values.push(current.trim()); current = ""; }
-                    else current += char;
+                for (let i = 0; i < csv.length; i++) {
+                  const char = csv[i];
+                  const nextChar = csv[i + 1];
+
+                  if (char === '"') {
+                    if (inQuotes && nextChar === '"') {
+                      current += '"';
+                      i++;
+                    } else {
+                      inQuotes = !inQuotes;
+                    }
+                  } else if (char === "," && !inQuotes) {
+                    currentRow.push(current.trim());
+                    current = "";
+                  } else if ((char === "\n" || char === "\r") && !inQuotes) {
+                    if (current.trim() || currentRow.length > 0) {
+                      currentRow.push(current.trim());
+                      if (currentRow.some(c => c.length > 0)) rows.push(currentRow);
+                      currentRow = [];
+                      current = "";
+                    }
+                    if (char === "\r" && nextChar === "\n") i++;
+                  } else {
+                    current += char;
                   }
-                  values.push(current.trim());
+                }
+                if (current.trim() || currentRow.length > 0) {
+                  currentRow.push(current.trim());
+                  if (currentRow.some(c => c.length > 0)) rows.push(currentRow);
+                }
 
+                if (rows.length < 2) { toast.error("Invalid CSV format"); return; }
+
+                const headers = rows[0].map(h => h.toLowerCase());
+                const productMap = new Map<string, any>();
+
+                for (let i = 1; i < rows.length; i++) {
+                  const values = rows[i];
                   const handle = values[headers.indexOf("handle")] || "";
                   const title = values[headers.indexOf("title")] || "";
-                  const price = parseFloat(values[headers.indexOf("variant price")] || "0") || 0;
+                  const price = parseFloat(values[headers.indexOf("variant price")] || "0");
                   const inventory = parseInt(values[headers.indexOf("variant inventory qty")] || "0") || 0;
                   const image = values[headers.indexOf("image src")] || "";
                   const body = values[headers.indexOf("body (html)")] || "";
 
-                  // Extract variant options (Shopify uses "Option1 Value", "Option2 Value", etc.)
+                  if (!handle) continue;
+
+                  // Extract variant options
                   const variantParts: string[] = [];
                   for (let opt = 1; opt <= 3; opt++) {
-                    const val = values[headers.indexOf(`option${opt} value`)] || "";
-                    if (val && val !== "default") variantParts.push(val);
+                    const optName = values[headers.indexOf(`option${opt} name`)] || "";
+                    const optVal = values[headers.indexOf(`option${opt} value`)] || "";
+                    if (optName && optVal && optVal.toLowerCase() !== "default title") {
+                      variantParts.push(optVal);
+                    }
                   }
-                  const variantName = variantParts.length > 0 ? variantParts.join(" / ") : "Default";
+                  const variantName = variantParts.length > 0 ? variantParts.join(" / ") : null;
 
                   if (!productMap.has(handle)) {
                     productMap.set(handle, {
                       name: title,
                       description: body.replace(/<[^>]*>/g, "").slice(0, 500),
-                      priceCents: Math.round(price * 100),
+                      priceCents: 0,
                       inventoryCount: inventory,
                       imageUrls: [],
                       variants: [],
@@ -1506,10 +1535,15 @@ export function AdminProductsPage() {
 
                   const product = productMap.get(handle)!;
 
-                  // Add variant if price is different or it's a new variant
-                  if (price > 0 && !product.variantMap.has(variantName)) {
-                    product.variants.push({ name: variantName, priceCents: Math.round(price * 100) });
-                    product.variantMap.set(variantName, 1);
+                  // Only process rows with prices
+                  if (!isNaN(price) && price > 0) {
+                    const priceCents = Math.round(price * 100);
+                    if (product.priceCents === 0) product.priceCents = priceCents;
+
+                    if (variantName && !product.variantMap.has(variantName)) {
+                      product.variants.push({ name: variantName, priceCents });
+                      product.variantMap.set(variantName, 1);
+                    }
                   }
 
                   if (image) {
@@ -1519,12 +1553,16 @@ export function AdminProductsPage() {
                 }
 
                 // Clean up and prepare preview
-                const preview = Array.from(productMap.values()).map(p => {
-                  const { variantMap, ...rest } = p;
-                  return rest;
-                }).filter(p => p.name && p.priceCents > 0);
+                const preview = Array.from(productMap.values())
+                  .map(p => {
+                    const { variantMap, ...rest } = p;
+                    return rest;
+                  })
+                  .filter(p => p.name && p.priceCents > 0)
+                  .sort((a, b) => a.name.localeCompare(b.name));
+
                 setImportModal({ preview, categoryId: 0 });
-              } catch (err) { toast.error("Failed to parse CSV"); }
+              } catch (err) { console.error(err); toast.error("Failed to parse CSV"); }
             };
             reader.readAsText(file);
           }} />

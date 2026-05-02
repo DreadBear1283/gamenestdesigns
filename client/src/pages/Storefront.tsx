@@ -1438,7 +1438,9 @@ export function AdminProductsPage() {
   const update = trpc.admin.updateProduct.useMutation({ onSuccess: () => products.refetch() });
   const deactivate = trpc.admin.deactivateProduct.useMutation({ onSuccess: () => products.refetch() });
   const upload = trpc.admin.uploadProductImage.useMutation();
+  const bulkImport = trpc.admin.bulkImportProducts.useMutation({ onSuccess: () => { products.refetch(); setImportModal(null); } });
   const [editing, setEditing] = useState<any | null>(null);
+  const [importModal, setImportModal] = useState<{ preview: any[]; categoryId: number } | null>(null);
 
   function blankProduct() {
     return { name: "", slug: "", description: "", priceCents: 1000, categoryId: null, inventoryCount: 10, lowStockThreshold: 3, isDigital: false, digitalFileUrl: null, imageUrls: [], weightOz: null, dimensionsIn: null, featured: false, bestseller: false, active: true };
@@ -1446,11 +1448,84 @@ export function AdminProductsPage() {
 
   return (
     <AdminLayout title="Products">
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end gap-2 mb-4">
+        <label className="px-5 h-11 rounded-md border border-border bg-card font-semibold cursor-pointer inline-flex items-center hover:bg-secondary">
+          Import CSV
+          <input type="file" accept=".csv" hidden onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              try {
+                const csv = reader.result as string;
+                const lines = csv.trim().split("\n");
+                const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+                const preview = lines.slice(1).map(line => {
+                  const values = line.split(",").map(v => v.trim());
+                  return {
+                    name: values[headers.indexOf("title")] || values[headers.indexOf("name")] || values[0],
+                    description: values[headers.indexOf("description")] || "",
+                    priceCents: Math.round((parseFloat(values[headers.indexOf("price")]) || 0) * 100),
+                    inventoryCount: parseInt(values[headers.indexOf("quantity")] || values[headers.indexOf("inventory")] || "0") || 0,
+                    imageUrls: values[headers.indexOf("image")] ? [values[headers.indexOf("image")]] : [],
+                  };
+                }).filter(p => p.name && p.priceCents > 0);
+                setImportModal({ preview, categoryId: 0 });
+              } catch (err) { toast.error("Failed to parse CSV"); }
+            };
+            reader.readAsText(file);
+          }} />
+        </label>
         <button onClick={() => setEditing(blankProduct())} className="px-5 h-11 rounded-md bg-primary text-primary-foreground font-semibold">
           + New product
         </button>
       </div>
+
+      {importModal !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-card rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-semibold mb-4">Import Products from CSV</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold mb-2">Select Category</label>
+              <select
+                value={importModal.categoryId}
+                onChange={(e) => setImportModal({ ...importModal, categoryId: parseInt(e.target.value) || 0 })}
+                className="w-full h-11 rounded-md border border-border bg-card px-3"
+              >
+                <option value="0">Choose a category...</option>
+                {categories.data?.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </select>
+            </div>
+            <div className="mb-4 max-h-96 overflow-y-auto">
+              <h3 className="font-semibold mb-2">{importModal.preview.length} products found:</h3>
+              <div className="space-y-2 text-sm">
+                {importModal.preview.slice(0, 10).map((p, i) => (
+                  <div key={i} className="p-2 bg-secondary rounded text-muted-foreground">
+                    <strong>{p.name}</strong> — {formatPrice(p.priceCents)} ({p.inventoryCount} in stock)
+                  </div>
+                ))}
+                {importModal.preview.length > 10 && <div className="text-muted-foreground">...and {importModal.preview.length - 10} more</div>}
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setImportModal(null)} className="px-4 h-11 rounded-md border border-border hover:bg-secondary">Cancel</button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (!importModal.categoryId) { toast.error("Please select a category"); return; }
+                    await bulkImport.mutateAsync(importModal.preview.map(p => ({ ...p, categoryId: importModal.categoryId })));
+                    toast.success(`Imported ${importModal.preview.length} products`);
+                  } catch (e: any) { toast.error(e.message ?? "Import failed"); }
+                }}
+                disabled={bulkImport.isPending || !importModal.categoryId}
+                className="px-4 h-11 rounded-md bg-primary text-primary-foreground font-semibold disabled:opacity-50"
+              >
+                {bulkImport.isPending ? "Importing…" : "Import"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editing !== null && (
         <ProductForm

@@ -489,6 +489,28 @@ const adminRouter = router({
       return storagePut(`products/${Date.now()}-${input.fileName}`, buffer, input.mimeType);
     }),
 
+  bulkImportProducts: adminProcedure
+    .input(z.array(z.object({
+      name: z.string().min(1),
+      description: z.string(),
+      priceCents: z.number().int().min(1),
+      categoryId: z.number().int().positive(),
+      inventoryCount: z.number().int().min(0),
+      imageUrls: z.array(z.string().url()).default([]),
+    })))
+    .mutation(async ({ input }) => {
+      const products = input.map(item => ({
+        ...item,
+        slug: item.name.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-"),
+        categoryId: item.categoryId,
+        isDigital: false,
+        featured: false,
+        bestseller: false,
+        active: true,
+      }));
+      return db.bulkCreateProducts(products);
+    }),
+
   // Orders
   orders: adminProcedure.query(() => db.listAllOrders()),
   order: adminProcedure

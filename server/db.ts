@@ -222,6 +222,14 @@ export async function createProduct(data: InsertProduct) {
   return rows[0];
 }
 
+export async function bulkCreateProducts(items: InsertProduct[]) {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  if (items.length === 0) return [];
+  const rows = await db.insert(products).values(items).returning();
+  return rows;
+}
+
 export async function updateProduct(id: number, data: Partial<InsertProduct>) {
   const db = getDb();
   if (!db) throw new Error("Database not available");

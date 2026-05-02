@@ -1484,6 +1484,14 @@ export function AdminProductsPage() {
                   const image = values[headers.indexOf("image src")] || "";
                   const body = values[headers.indexOf("body (html)")] || "";
 
+                  // Extract variant options (Shopify uses "Option1 Value", "Option2 Value", etc.)
+                  const variantParts: string[] = [];
+                  for (let opt = 1; opt <= 3; opt++) {
+                    const val = values[headers.indexOf(`option${opt} value`)] || "";
+                    if (val && val !== "default") variantParts.push(val);
+                  }
+                  const variantName = variantParts.length > 0 ? variantParts.join(" / ") : "Default";
+
                   if (!productMap.has(handle)) {
                     productMap.set(handle, {
                       name: title,
@@ -1491,16 +1499,30 @@ export function AdminProductsPage() {
                       priceCents: Math.round(price * 100),
                       inventoryCount: inventory,
                       imageUrls: [],
+                      variants: [],
+                      variantMap: new Map<string, number>(),
                     });
                   }
 
+                  const product = productMap.get(handle)!;
+
+                  // Add variant if price is different or it's a new variant
+                  if (price > 0 && !product.variantMap.has(variantName)) {
+                    product.variants.push({ name: variantName, priceCents: Math.round(price * 100) });
+                    product.variantMap.set(variantName, 1);
+                  }
+
                   if (image) {
-                    const urls = productMap.get(handle)!.imageUrls;
+                    const urls = product.imageUrls;
                     if (!urls.includes(image)) urls.push(image);
                   }
                 }
 
-                const preview = Array.from(productMap.values()).filter(p => p.name && p.priceCents > 0);
+                // Clean up and prepare preview
+                const preview = Array.from(productMap.values()).map(p => {
+                  const { variantMap, ...rest } = p;
+                  return rest;
+                }).filter(p => p.name && p.priceCents > 0);
                 setImportModal({ preview, categoryId: 0 });
               } catch (err) { toast.error("Failed to parse CSV"); }
             };
@@ -1533,6 +1555,11 @@ export function AdminProductsPage() {
                 {importModal.preview.slice(0, 10).map((p, i) => (
                   <div key={i} className="p-2 bg-secondary rounded text-muted-foreground">
                     <strong>{p.name}</strong> — {formatPrice(p.priceCents)} ({p.inventoryCount} in stock)
+                    {p.variants && p.variants.length > 0 && (
+                      <div className="mt-1 ml-2 text-xs text-muted-foreground/80">
+                        {p.variants.map((v: any) => `${v.name}: ${formatPrice(v.priceCents)}`).join(", ")}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {importModal.preview.length > 10 && <div className="text-muted-foreground">...and {importModal.preview.length - 10} more</div>}

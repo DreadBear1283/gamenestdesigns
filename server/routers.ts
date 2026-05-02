@@ -499,6 +499,10 @@ const adminRouter = router({
       categoryId: z.number().int().positive(),
       inventoryCount: z.number().int().min(0),
       imageUrls: z.array(z.string().url()).default([]),
+      variants: z.array(z.object({
+        name: z.string(),
+        priceCents: z.number().int().min(1),
+      })).default([]),
     })))
     .mutation(async ({ input }) => {
       const products = input.map(item => ({

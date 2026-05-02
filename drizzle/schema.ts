@@ -60,6 +60,7 @@ export const products = pgTable("products", {
   slug: varchar("slug", { length: 210 }).notNull().unique(),
   description: text("description").notNull(),
   priceCents: integer("price_cents").notNull(),
+  variants: jsonb("variants").$type<Array<{ name: string; priceCents: number }>>().notNull().default([]),
   categoryId: integer("category_id"),
   inventoryCount: integer("inventory_count").default(0).notNull(),
   lowStockThreshold: integer("low_stock_threshold").default(5).notNull(),

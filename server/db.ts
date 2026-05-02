@@ -16,6 +16,7 @@ import {
   orderItems,
   orders,
   products,
+  reviews,
   settings,
   users,
   type SafeUser,
@@ -584,4 +585,53 @@ export async function setSetting(key: string, value: unknown) {
     .insert(settings)
     .values({ key, value: value as any })
     .onConflictDoUpdate({ target: settings.key, set: { value: value as any, updatedAt: new Date() } });
+}
+
+// ---------- REVIEWS ----------
+export async function getProductReviews(productId: number) {
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(reviews).where(eq(reviews.productId, productId)).orderBy(desc(reviews.createdAt));
+}
+
+export async function getRecentReviews(limit: number = 10) {
+  const db = getDb();
+  if (!db) return [];
+  return db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(limit);
+}
+
+export async function createReview(data: {
+  productId?: number;
+  userId?: number;
+  orderId?: number;
+  rating: number;
+  title: string;
+  content: string;
+  authorName?: string;
+}) {
+  const db = getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(reviews).values({
+    ...data,
+    source: "customer",
+  }).returning();
+  return result[0];
+}
+
+export async function importEtsyReviews(etsyReviews: Array<{ review_id: number; rating: number; review_text: string; title: string; reviewer_name: string }>) {
+  const db = getDb();
+  if (!db) return;
+  for (const review of etsyReviews) {
+    await db
+      .insert(reviews)
+      .values({
+        rating: review.rating,
+        title: review.title,
+        content: review.review_text,
+        authorName: review.reviewer_name,
+        source: "etsy",
+        etsyReviewId: review.review_id.toString(),
+      })
+      .onConflictDoNothing({ target: reviews.etsyReviewId });
+  }
 }

@@ -9,6 +9,7 @@ import {
   verifyPassword,
 } from "./_core/auth";
 import { ENV } from "./_core/env";
+import { fetchEtsyReviews } from "./_core/etsy";
 import { notifyOwner, sendEmail } from "./_core/notification";
 import { sendOrderNotificationSMS } from "./_core/sms";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -597,12 +598,49 @@ const adminRouter = router({
     .mutation(({ input }) => db.closeChatConversation(input.conversationId)),
 });
 
+// ====== REVIEWS ROUTER ======
+const reviewsRouter = router({
+  getProductReviews: publicProcedure
+    .input(z.object({ productId: z.number().int() }))
+    .query(({ input }) => db.getProductReviews(input.productId)),
+  getRecent: publicProcedure
+    .input(z.object({ limit: z.number().int().default(10) }))
+    .query(({ input }) => db.getRecentReviews(input.limit)),
+  create: protectedProcedure
+    .input(z.object({
+      productId: z.number().int().optional(),
+      orderId: z.number().int(),
+      rating: z.number().int().min(1).max(5),
+      title: z.string().min(5),
+      content: z.string().min(10),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user owns the order
+      const order = await db.getOrderById(input.orderId);
+      if (!order || order.userId !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
+      return db.createReview({
+        ...input,
+        userId: ctx.user.id,
+        authorName: ctx.user.email.split("@")[0],
+      });
+    }),
+  importFromEtsy: adminProcedure
+    .mutation(async () => {
+      const etsyReviews = await fetchEtsyReviews(50);
+      await db.importEtsyReviews(etsyReviews);
+      return { imported: etsyReviews.length };
+    }),
+});
+
 export const appRouter = router({
   auth: authRouter,
   shop: shopRouter,
   cart: cartRouter,
   account: accountRouter,
   admin: adminRouter,
+  reviews: reviewsRouter,
 });
 
 export type AppRouter = typeof appRouter;

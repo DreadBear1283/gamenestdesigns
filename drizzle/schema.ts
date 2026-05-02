@@ -76,6 +76,21 @@ export const products = pgTable("products", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const reviews = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  productId: integer("product_id").references(() => products.id),
+  userId: integer("user_id").references(() => users.id),
+  orderId: integer("order_id").references(() => orders.id),
+  rating: integer("rating").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  content: text("content").notNull(),
+  source: varchar("source", { length: 50 }).default("customer").notNull(), // "customer" or "etsy"
+  authorName: varchar("author_name", { length: 120 }),
+  etsyReviewId: varchar("etsy_review_id", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const addresses = pgTable("addresses", {
   id: serial("id").primaryKey(),
   userId: integer("user_id"),

@@ -176,7 +176,7 @@ async function notifyNewOrder(order: NonNullable<Awaited<ReturnType<typeof db.ge
     ...order.items.map(item => `  ${item.quantity} × ${item.productName} (${money(item.totalPrice)})`),
   ].join("\n");
   await notifyOwner({ title: `New GameNestDesigns order ${order.orderNumber}`, content });
-  await sendOrderNotificationSMS(order.orderNumber, order.customerName);
+  await sendOrderNotificationSMS(order.orderNumber, order.customerName, order.items);
 
   if (order.customerEmail) {
     await sendEmail({

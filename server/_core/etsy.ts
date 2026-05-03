@@ -1,5 +1,34 @@
 import { ENV } from "./env";
 
+let cachedShopId: string | null = null;
+
+async function getShopId(): Promise<string> {
+  if (cachedShopId) return cachedShopId;
+  if (!ENV.etsyShopId) throw new Error("Etsy shop ID not configured");
+
+  // If it's already numeric, use it
+  if (/^\d+$/.test(ENV.etsyShopId)) {
+    cachedShopId = ENV.etsyShopId;
+    return ENV.etsyShopId;
+  }
+
+  // If it's a shop name, convert to numeric ID
+  try {
+    const response = await fetch(`https://api.etsy.com/v3/application/shops?shop_name=${ENV.etsyShopId}`, {
+      headers: { "x-api-key": ENV.etsyApiKey },
+    });
+    if (!response.ok) throw new Error(`Failed to lookup shop: ${response.status}`);
+    const data = await response.json();
+    const shopId = data.results?.[0]?.shop_id;
+    if (!shopId) throw new Error(`Shop not found: ${ENV.etsyShopId}`);
+    cachedShopId = shopId.toString();
+    return cachedShopId;
+  } catch (error) {
+    console.error("Failed to convert shop name to ID:", error);
+    throw error;
+  }
+}
+
 export interface EtsyReview {
   review_id: number;
   rating: number;
@@ -37,7 +66,8 @@ async function fetchEtsyApi(endpoint: string, method: string = "GET", body?: any
     throw new Error("Etsy API not configured");
   }
 
-  const url = `https://api.etsy.com/v3/application/shops/${ENV.etsyShopId}${endpoint}`;
+  const shopId = await getShopId();
+  const url = `https://api.etsy.com/v3/application/shops/${shopId}${endpoint}`;
   try {
     const response = await fetch(url, {
       method,
@@ -102,7 +132,8 @@ export async function sendEtsyMessage(conversationId: number, message: string): 
 
 export async function fetchEtsyShopInfo(): Promise<any> {
   try {
-    return await fetch("https://api.etsy.com/v3/application/shops/me", {
+    const shopId = await getShopId();
+    return await fetch(`https://api.etsy.com/v3/application/shops/${shopId}`, {
       method: "GET",
       headers: {
         "x-api-key": ENV.etsyApiKey,
